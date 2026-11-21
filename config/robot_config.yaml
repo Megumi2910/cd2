@@ -1,0 +1,119 @@
+# Cấu hình trung tâm cho hệ thống Robot Tự Hành (Webots R2025a)
+# Nhóm Nanana — AI Nhận diện biển báo & Giữ làn đường
+
+simulation:
+  time_step_ms: 32
+  camera_name: "camera"
+  gps_name: "gps"
+  compass_name: "compass"
+  camera_width: 640
+  camera_height: 480
+
+vehicle:
+  base_speed_kmh: 22.0
+  min_curve_speed_kmh: 14.0
+  speed_limit_30_kmh: 18.0
+  speed_limit_50_kmh: 30.0
+  max_steering_rad: 0.45
+  turn_steering_rad: 0.44
+  turn_speed_kmh: 14.0
+  intersection_straight_speed_kmh: 18.0
+  curvature_slowdown_gain: 180.0
+
+lane_detection:
+  # Kích thước ảnh Bird's Eye View (BEV)
+  bev_width: 400
+  bev_height: 400
+  # Vùng ROI hình thang trên ảnh camera 640x480: [top-left, top-right, bottom-right, bottom-left]
+  # Đã loại bỏ hoàn toàn vùng capo xe ở đáy ảnh
+  roi_src_norm:
+    - [0.35, 0.56]
+    - [0.65, 0.56]
+    - [0.96, 0.88]
+    - [0.04, 0.88]
+  roi_dst_norm:
+    - [0.22, 0.0]
+    - [0.78, 0.0]
+    - [0.78, 1.0]
+    - [0.22, 1.0]
+  # Ngưỡng lọc màu vạch trắng (HLS) và vạch vàng (HSV)
+  white_l_min: 195
+  white_s_max: 65
+  yellow_h_min: 15
+  yellow_h_max: 38
+  yellow_s_min: 90
+  yellow_v_min: 110
+  # Ngưỡng gradient Sobel X
+  sobel_min: 35
+  sobel_max: 255
+  # Tham số Sliding Window
+  num_windows: 9
+  window_margin: 50
+  min_recenter_pixels: 30
+  min_lane_pixels: 90
+  # Bề rộng làn chuẩn trong ảnh BEV (pixel) dùng cho fallback khi chỉ thấy 1 vạch
+  default_lane_width_px: 210.0
+  # Hệ số quy đổi pixel BEV -> mét (4.0m / 210px ≈ 0.0190 m/px)
+  meters_per_pixel_x: 0.0190
+  # Vị trí lookahead theo chiều dọc BEV (0=xa nhất, 1=gần xe nhất)
+  lookahead_ratio: 0.70
+  # Làm mượt EMA (0 < alpha <= 1; nhỏ hơn = mượt hơn)
+  ema_alpha: 0.35
+
+pid:
+  kp: 0.40
+  ki: 0.01
+  kd: 0.14
+  integral_limit: 1.2
+  derivative_alpha: 0.4
+  max_output: 0.45
+
+sign_detection:
+  weights_path: "weights/sign_yolo11n_best.pt"
+  fallback_weights_path: "yolo11n.pt"
+  conf_threshold: 0.78
+  iou_threshold: 0.45
+  imgsz: 640
+  device: "cuda"
+  use_half: false
+  # Tên 8 lớp biển báo giao thông Việt Nam (đúng thứ tự class_id 0..7)
+  class_names:
+    - "stop"
+    - "turn_left"
+    - "turn_right"
+    - "go_straight"
+    - "no_left_turn"
+    - "no_right_turn"
+    - "speed_limit_30"
+    - "speed_limit_50"
+
+behavior_fsm:
+  # Số khung hình liên tiếp cần thấy biển để xác nhận (chống nhiễu)
+  debounce_frames: 4
+  # Chiều cao bounding box (px trên ảnh 640x480) để kích hoạt phản ứng biển báo (~5-6m trước biển)
+  trigger_bbox_height_px: 68
+  speed_trigger_bbox_height_px: 48
+  # Thời gian dừng tại biển STOP (giây)
+  stop_duration_s: 3.0
+  # Thời gian chờ tránh kích hoạt lặp cùng 1 biển (giây)
+  sign_cooldown_s: 8.0
+  # Thời gian tiến vào tâm ngã tư trước khi bắt đầu đánh lái rẽ trái / rẽ phải (hiệu chuẩn theo log thực tế)
+  turn_approach_s: 2.9
+  turn_left_approach_s: 2.9
+  turn_right_approach_s: 3.05
+  # Góc quay mục tiêu cho rẽ trái/phải tại ngã tư (độ)
+  turn_target_deg: 82.0
+  turn_max_duration_s: 5.5
+  # Thời gian giữ thẳng qua giao lộ khi gặp biển go_straight (giây)
+  cross_straight_duration_s: 4.5
+  # Thời gian hiệu lực của biển cấm rẽ (giây)
+  prohibition_ttl_s: 12.0
+
+dashboard:
+  enabled: true
+  window_name: "Nanana Autonomous Robot - Live HUD"
+  show_fps: true
+
+logging:
+  enabled: true
+  output_dir: "logs"
